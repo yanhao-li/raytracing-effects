@@ -111,14 +111,25 @@ bool Sphere::intersect(const Ray& ray, Intersection& hit) {
   // If the ray hits the sphere, set the result of the intersection in the
   // struct 'hit'
 
-  // calculate the discriminant, B^2 - 4AC
-  if (pow(2 * ray.direction.dot(ray.origin - this->position), 2) -
-          4 * ray.direction.dot(ray.direction) *
-              ((ray.origin - this->position).dot(ray.origin - this->position) -
-               pow(this->radius, 2)) >= 0) {
+	// vector (e - c)
+  Vector3d vec = ray.origin - this->position;  
+	// ray direction
+  Vector3d rd = ray.direction;  
+
+	// d dot d
+	double dd = rd.dot(rd);              
+	// discriminant, B^2 - 4AC
+  double df = pow(2 * rd.dot(vec), 2) -
+              4 * dd * ((vec).dot(vec) - pow(this->radius, 2));
+  if (df >= 0) {
+		double t1 = (-rd.dot(vec) + sqrt(df))/ 2 * dd;
+		double t2 = (-rd.dot(vec) - sqrt(df))/ 2 * dd;
+		double t = t1 < t2 ? t1 : t2;
+		hit.position = ray.origin + t * rd;
+		hit.normal = (hit.position - this->position).normalized();
+		hit.ray_param = t;
     return true;
   }
-
   return false;
 }
 
