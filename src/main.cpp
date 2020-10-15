@@ -211,10 +211,20 @@ Object* find_nearest_object(const Scene& scene, const Ray& ray,
   // The function must return 'nullptr' if no object is hit, otherwise it must
   // return a pointer to the hit object, and set the parameters of the argument
   // 'hit' to their expected values.
-  for (const auto& object : scene.objects) {
+	double closest_dist = INT_MAX;
+
+  for (int i = 0; i < scene.objects.size(); i++) {
     Intersection hit;
-    object->intersect(ray, hit);
-    // calculate distance between hit and ray origin
+
+    if (scene.objects[i]->intersect(ray, hit)) {
+   		// calculate distance between hit and ray origin
+			double dist = (hit.position - ray.origin).norm();
+			if (dist < closest_dist) {
+				closest_dist = dist;
+				closest_hit = hit;
+				closest_index = i;
+			}
+		};
   }
 
   if (closest_index < 0) {
@@ -250,9 +260,9 @@ void render_scene(const Scene& scene) {
 
   // the final output image is 640x480 px
   // int w = 640;
-  int w = 8;
+  int w = 64;
   // int h = 480;
-  int h = 6;
+  int h = 48;
   MatrixXd R = MatrixXd::Zero(w, h);
   MatrixXd G = MatrixXd::Zero(w, h);
   MatrixXd B = MatrixXd::Zero(w, h);
@@ -262,8 +272,7 @@ void render_scene(const Scene& scene) {
   // The sensor grid is at a distance 'focal_length' from the camera center,
   // and covers an viewing angle given by 'field_of_view'.
   double aspect_ratio = double(w) / double(h);
-  double scale_y =
-      1.0;  // TODO: Stretch the pixel grid by the proper amount here
+  double scale_y = 1.0;  // TODO: Stretch the pixel grid by the proper amount here
   double scale_x = 1.0;  //
 
   // The pixel grid through which we shoot rays is at a distance 'focal_length'
