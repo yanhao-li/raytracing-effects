@@ -272,15 +272,15 @@ void render_scene(const Scene& scene) {
   // The sensor grid is at a distance 'focal_length' from the camera center,
   // and covers an viewing angle given by 'field_of_view'.
   double aspect_ratio = double(w) / double(h);
-  double scale_y = 1.0;  // TODO: Stretch the pixel grid by the proper amount here
-  double scale_x = 1.0;  //
+  double scale_y = tan(scene.camera.field_of_view/2 * scene.camera.focal_length);  // TODO: Stretch the pixel grid by the proper amount here
+  double scale_x = tan(scene.camera.field_of_view/2 * scene.camera.focal_length);  //
 
   // The pixel grid through which we shoot rays is at a distance 'focal_length'
   // from the sensor, and is scaled from the canonical [-1,1] in order
   // to produce the target field of view.
   Vector3d grid_origin(-scale_x, scale_y, -scene.camera.focal_length);
-  Vector3d x_displacement(2.0 / w * scale_x, 0, 0);
-  Vector3d y_displacement(0, -2.0 / h * scale_y, 0);
+  Vector3d x_displacement(2.0 * scale_x / w, 0, 0);
+  Vector3d y_displacement(0, -2.0  * scale_y / h, 0);
 
   for (unsigned i = 0; i < w; ++i) {
     for (unsigned j = 0; j < h; ++j) {
