@@ -105,7 +105,7 @@ struct Scene {
 ////////////////////////////////////////////////////////////////////////////////
 
 bool Sphere::intersect(const Ray& ray, Intersection& hit) {
-  // TODO:
+  // TODO: - Done
   //
   // Compute the intersection between the ray and the sphere
   // If the ray hits the sphere, set the result of the intersection in the
@@ -122,9 +122,17 @@ bool Sphere::intersect(const Ray& ray, Intersection& hit) {
   double df = pow(2 * rd.dot(vec), 2) -
               4 * dd * ((vec).dot(vec) - pow(this->radius, 2));
   if (df >= 0) {
-		double t1 = (-rd.dot(vec) + sqrt(df))/ 2 * dd;
-		double t2 = (-rd.dot(vec) - sqrt(df))/ 2 * dd;
-		double t = t1 < t2 ? t1 : t2;
+    double t;
+		double t1 = (-rd.dot(vec) + sqrt(df)) / (2 * dd);
+		double t2 = (-rd.dot(vec) - sqrt(df)) / (2 * dd);
+    if (t1 < t2 && t1 > 0) {
+      t = t1;
+    } else if (t2 < t1 && t2 > 0) {
+      t = t2;
+    } else {
+      return false;
+    }
+
 		hit.position = ray.origin + t * rd;
 		hit.normal = (hit.position - this->position).normalized();
 		hit.ray_param = t;
@@ -160,7 +168,7 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
 
   // Ambient light contribution
   Vector3d ambient_color =
-      obj.material.ambient_color.array() * scene.ambient_light.array();
+      mat.ambient_color.array() * scene.ambient_light.array();
 
   // Punctual lights contribution (direct lighting)
   Vector3d lights_color(0, 0, 0);
@@ -169,13 +177,24 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
     Vector3d N = hit.normal;
 
     // TODO: Shoot a shadow ray to determine if the light should affect the
-    // intersection point
+    // intersection point - Done
+    for (const auto object : scene.objects) {
+      Intersection shadow_ray_hit;
+      Ray shadow_ray;
+      shadow_ray.origin = hit.position;
+      shadow_ray.direction = (light.position - hit.position).normalized();
+
+      if (object->intersect(shadow_ray, shadow_ray_hit)) {
+        ambient_color = Vector3d(0, 0, 0);
+        continue;
+      }
+    }
 
     // Diffuse contribution
     Vector3d diffuse = mat.diffuse_color * std::max(Li.dot(N), 0.0);
 
-    // TODO: Specular contribution
-    Vector3d specular(0, 0, 0);
+    // TODO: Specular contribution - Done.
+    Vector3d specular = mat.specular_color * pow(std::max((ray.origin + light.position - 2 * hit.position).normalized().dot(N), 0.0), mat.specular_exponent);
 
     // Attenuate lights according to the squared distance to the lights
     Vector3d D = light.position - hit.position;
@@ -185,7 +204,14 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
 
   // TODO: Compute the color of the reflected ray and add its contribution to
   // the current point color.
-  Vector3d reflection_color(0, 0, 0);
+  Vector3d reflection_color = Vector3d(0,0,0);
+  //prepare reflection ray
+  Ray reflection_ray;
+  reflection_ray.origin = hit.position;
+  reflection_ray.direction = ray.direction - 2 * (ray.direction.dot(hit.normal)) * hit.normal;
+  if (max_bounce > 0) {
+    reflection_color += mat.specular_color * shoot_ray(scene, reflection_ray, max_bounce - 1);
+  }
 
   // TODO: Compute the color of the refracted ray and add its contribution to
   // the current point color.
@@ -272,8 +298,10 @@ void render_scene(const Scene& scene) {
   // The sensor grid is at a distance 'focal_length' from the camera center,
   // and covers an viewing angle given by 'field_of_view'.
   double aspect_ratio = double(w) / double(h);
-  double scale_y = tan(scene.camera.field_of_view/2 * scene.camera.focal_length);  // TODO: Stretch the pixel grid by the proper amount here
-  double scale_x = tan(scene.camera.field_of_view/2 * scene.camera.focal_length);  //
+
+	double y_tmp = tan(scene.camera.field_of_view / 2) * scene.camera.focal_length;
+  double scale_y = y_tmp;  // TODO: Stretch the pixel grid by the proper amount here
+  double scale_x = y_tmp * aspect_ratio;  //
 
   // The pixel grid through which we shoot rays is at a distance 'focal_length'
   // from the sensor, and is scaled from the canonical [-1,1] in order
@@ -285,8 +313,7 @@ void render_scene(const Scene& scene) {
   for (unsigned i = 0; i < w; ++i) {
     for (unsigned j = 0; j < h; ++j) {
       // TODO: Implement depth of field
-      Vector3d shift =
-          grid_origin + (i + 0.5) * x_displacement + (j + 0.5) * y_displacement;
+      Vector3d shift = grid_origin + (i + 0.5) * x_displacement + (j + 0.5) * y_displacement;
 
       // Prepare the ray
       Ray ray;
@@ -294,7 +321,7 @@ void render_scene(const Scene& scene) {
       if (scene.camera.is_perspective) {
         // Perspective camera
         ray.origin = scene.camera.position;
-        ray.direction = shift - ray.origin;
+        ray.direction = shift;
       } else {
         // Orthographic camera
         ray.origin = scene.camera.position + Vector3d(shift[0], shift[1], 0);
