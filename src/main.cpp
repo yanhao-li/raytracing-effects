@@ -123,8 +123,9 @@ bool Sphere::intersect(const Ray& ray, Intersection& hit) {
               4 * dd * ((vec).dot(vec) - pow(this->radius, 2));
   if (df >= 0) {
     double t;
-		double t1 = (-rd.dot(vec) + sqrt(df)) / (2 * dd);
-		double t2 = (-rd.dot(vec) - sqrt(df)) / (2 * dd);
+		double t1 = (-2 * rd.dot(vec) + sqrt(df)) / (2 * dd);
+		double t2 = (-2 * rd.dot(vec) - sqrt(df)) / (2 * dd);
+
     if (t1 < t2 && t1 > 0) {
       t = t1;
     } else if (t2 < t1 && t2 > 0) {
@@ -167,8 +168,7 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
   const Material& mat = obj.material;
 
   // Ambient light contribution
-  Vector3d ambient_color =
-      mat.ambient_color.array() * scene.ambient_light.array();
+  Vector3d ambient_color = mat.ambient_color.array() * scene.ambient_light.array();
 
   // Punctual lights contribution (direct lighting)
   Vector3d lights_color(0, 0, 0);
@@ -218,7 +218,7 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
   // the current point color.
   //       Make sure to check for total internal reflection before shooting a
   //       new ray.
-  Vector3d refraction_color(0, 0, 0);
+  Vector3d refraction_color = mat.refraction_color;
 
   // Rendering equation
   Vector3d C =
@@ -293,9 +293,9 @@ void render_scene(const Scene& scene) {
 
   // the final output image is 640x480 px
   // int w = 640;
-  int w = 64;
+  int w = 640;
   // int h = 480;
-  int h = 48;
+  int h = 480;
   MatrixXd R = MatrixXd::Zero(w, h);
   MatrixXd G = MatrixXd::Zero(w, h);
   MatrixXd B = MatrixXd::Zero(w, h);
@@ -321,13 +321,14 @@ void render_scene(const Scene& scene) {
     for (unsigned j = 0; j < h; ++j) {
       // TODO: Implement depth of field
       Vector3d shift = grid_origin + (i + 0.5) * x_displacement + (j + 0.5) * y_displacement;
+      Vector3d noise(scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.position[2]);
 
       // Prepare the ray
       Ray ray;
 
       if (scene.camera.is_perspective) {
         // Perspective camera
-        ray.origin = scene.camera.position;
+        ray.origin = noise;
         ray.direction = shift;
       } else {
         // Orthographic camera
