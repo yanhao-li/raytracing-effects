@@ -178,23 +178,22 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
 
     // TODO: Shoot a shadow ray to determine if the light should affect the
     // intersection point - Done
-    for (const auto object : scene.objects) {
-      Intersection shadow_ray_hit;
-      Ray shadow_ray;
-      shadow_ray.origin = hit.position;
-      shadow_ray.direction = (light.position - hit.position).normalized();
-
-      if (object->intersect(shadow_ray, shadow_ray_hit)) {
-        ambient_color = Vector3d(0, 0, 0);
-        continue;
-      }
+    Intersection shadow_ray_hit;
+    Ray shadow_ray;
+    shadow_ray.direction = (light.position - hit.position).normalized();
+    shadow_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * shadow_ray.direction;
+    
+    if (!is_light_visible(scene, shadow_ray, light)) {
+      continue;
     }
 
     // Diffuse contribution
     Vector3d diffuse = mat.diffuse_color * std::max(Li.dot(N), 0.0);
 
     // TODO: Specular contribution - Done.
-    Vector3d specular = mat.specular_color * pow(std::max((ray.origin + light.position - 2 * hit.position).normalized().dot(N), 0.0), mat.specular_exponent);
+    Vector3d h = (ray.origin + light.position - 2 * hit.position).normalized();
+    Vector3d specular = mat.specular_color * pow(std::max(N.dot(h), 0.0), mat.specular_exponent);
+		// Vector3d specular(0, 0, 0);
 
     // Attenuate lights according to the squared distance to the lights
     Vector3d D = light.position - hit.position;
@@ -207,10 +206,12 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
   Vector3d reflection_color = Vector3d(0,0,0);
   //prepare reflection ray
   Ray reflection_ray;
-  reflection_ray.origin = hit.position;
   reflection_ray.direction = ray.direction - 2 * (ray.direction.dot(hit.normal)) * hit.normal;
-  if (max_bounce > 0) {
-    reflection_color += mat.specular_color * shoot_ray(scene, reflection_ray, max_bounce - 1);
+  reflection_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * reflection_ray.direction;
+  Intersection reflection_hit;
+  Object* reflection_obj = find_nearest_object(scene, reflection_ray, reflection_hit);
+  if (reflection_obj && max_bounce > 0) {
+    reflection_color = reflection_color + mat.specular_color.cwiseProduct(ray_color(scene, reflection_ray, *reflection_obj, reflection_hit, max_bounce - 1));
   }
 
   // TODO: Compute the color of the refracted ray and add its contribution to
@@ -264,7 +265,13 @@ Object* find_nearest_object(const Scene& scene, const Ray& ray,
 }
 
 bool is_light_visible(const Scene& scene, const Ray& ray, const Light& light) {
-  // TODO: Determine if the light is visible here
+  // TODO: Determine if the light is visible here - Done.
+  for (const auto object : scene.objects) {
+    Intersection hit;
+    if (object->intersect(ray, hit)) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -300,7 +307,7 @@ void render_scene(const Scene& scene) {
   double aspect_ratio = double(w) / double(h);
 
 	double y_tmp = tan(scene.camera.field_of_view / 2) * scene.camera.focal_length;
-  double scale_y = y_tmp;  // TODO: Stretch the pixel grid by the proper amount here
+  double scale_y = y_tmp;  // TODO: Stretch the pixel grid by the proper amount here - Done
   double scale_x = y_tmp * aspect_ratio;  //
 
   // The pixel grid through which we shoot rays is at a distance 'focal_length'
