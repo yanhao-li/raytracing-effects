@@ -186,8 +186,8 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
     Intersection shadow_ray_hit;
     Ray shadow_ray;
     shadow_ray.direction = Li;
-    shadow_ray.origin = hit.position;
-    // shadow_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * shadow_ray.direction;
+    // shadow_ray.origin = hit.position;
+    shadow_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * shadow_ray.direction;
     
     if (!is_light_visible(scene, shadow_ray, light)) {
       continue;
