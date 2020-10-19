@@ -80,6 +80,10 @@ struct Sphere : public Object {
   Vector3d position;
   double radius;
 
+  void set_position(Vector3d position) {
+    this->position = position;
+  }
+
   virtual ~Sphere() = default;
   virtual bool intersect(const Ray& ray, Intersection& hit) override;
 };
@@ -160,7 +164,7 @@ Object* find_nearest_object(const Scene& scene, const Ray& ray,
                             Intersection& closest_hit);
 bool is_light_visible(const Scene& scene, const Ray& ray, const Light& light);
 Vector3d shoot_ray(const Scene& scene, const Ray& ray, int max_bounce);
-std::vector<MatrixXd> get_scene(const Scene& scene);
+std::vector<MatrixXd> get_scene(const Scene& scene, int w, int h);
 // -----------------------------------------------------------------------------
 
 Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
@@ -292,19 +296,42 @@ Vector3d shoot_ray(const Scene& scene, const Ray& ray, int max_bounce) {
 
 void render_scene(const Scene& scene) {
   std::cout << "Simple ray tracer." << std::endl;
-  std::vector<MatrixXd> ret = get_scene(scene);
+  int w = 640;
+  int h = 480;
+  std::vector<MatrixXd> ret = get_scene(scene, w, h);
   // Save to png
   const std::string filename("raytrace.png");
   write_matrix_to_png(ret[0], ret[1], ret[2], ret[3], filename);
 }
 
-///////////////////////////////////////////////////////////////////////////////////
-std::vector<MatrixXd> get_scene(const Scene& scene) {
-  // the final output image is 640x480 px
-  // int w = 640;
+void render_scene_animation(const Scene& scene) {
+  std::cout << "Rendering animation" << std::endl;
   int w = 640;
-  // int h = 480;
   int h = 480;
+  const char* fileName = "out.gif";
+  std::vector<uint8_t> image;
+  int delay = 25; // Milliseconds to wait between frames
+  GifWriter g;
+  GifBegin(&g, fileName, w, h, delay);
+
+  for (unsigned i=0;i<10;i++)
+  {
+      // Generate R G B A matrices
+      auto sphere3 = std::dynamic_pointer_cast<Sphere>(scene.objects[3]);
+      sphere3->position += Vector3d(-0.1,0.1,0.2);
+      sphere3->radius += 0.1;
+      auto sphere4 = std::dynamic_pointer_cast<Sphere>(scene.objects[4]);
+      sphere4->position += Vector3d(0.1,-0.1,-0.2);
+      sphere4->radius -= 0.1;
+      std::vector<MatrixXd> ret = get_scene(scene, w, h);
+      write_matrix_to_uint8(ret[0], ret[1], ret[2], ret[3], image);    
+      GifWriteFrame(&g, image.data(), w, h, delay);
+  }
+  GifEnd(&g);
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+std::vector<MatrixXd> get_scene(const Scene& scene, int w, int h) {
   MatrixXd R = MatrixXd::Zero(w, h);
   MatrixXd G = MatrixXd::Zero(w, h);
   MatrixXd B = MatrixXd::Zero(w, h);
@@ -434,5 +461,6 @@ int main(int argc, char* argv[]) {
   }
   Scene scene = load_scene(argv[1]);
   render_scene(scene);
+  render_scene_animation(scene);
   return 0;
 }
