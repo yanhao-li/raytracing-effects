@@ -16,6 +16,7 @@
                                         // your project!
 #include "stb_image_write.h"
 #include "utils.h"
+#include <gif.h>
 
 // JSON parser library (https://github.com/nlohmann/json)
 #include "json.hpp"
@@ -159,7 +160,7 @@ Object* find_nearest_object(const Scene& scene, const Ray& ray,
                             Intersection& closest_hit);
 bool is_light_visible(const Scene& scene, const Ray& ray, const Light& light);
 Vector3d shoot_ray(const Scene& scene, const Ray& ray, int max_bounce);
-
+std::vector<MatrixXd> get_scene(const Scene& scene);
 // -----------------------------------------------------------------------------
 
 Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
@@ -291,7 +292,14 @@ Vector3d shoot_ray(const Scene& scene, const Ray& ray, int max_bounce) {
 
 void render_scene(const Scene& scene) {
   std::cout << "Simple ray tracer." << std::endl;
+  std::vector<MatrixXd> ret = get_scene(scene);
+  // Save to png
+  const std::string filename("raytrace.png");
+  write_matrix_to_png(ret[0], ret[1], ret[2], ret[3], filename);
+}
 
+///////////////////////////////////////////////////////////////////////////////////
+std::vector<MatrixXd> get_scene(const Scene& scene) {
   // the final output image is 640x480 px
   // int w = 640;
   int w = 640;
@@ -351,9 +359,7 @@ void render_scene(const Scene& scene) {
     }
   }
 
-  // Save to png
-  const std::string filename("raytrace.png");
-  write_matrix_to_png(R, G, B, A, filename);
+  return {R, G, B, A};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
