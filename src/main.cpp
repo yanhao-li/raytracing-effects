@@ -180,8 +180,9 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
     // intersection point - Done
     Intersection shadow_ray_hit;
     Ray shadow_ray;
-    shadow_ray.direction = (light.position - hit.position).normalized();
-    shadow_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * shadow_ray.direction;
+    shadow_ray.direction = Li;
+    shadow_ray.origin = hit.position;
+    // shadow_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * shadow_ray.direction;
     
     if (!is_light_visible(scene, shadow_ray, light)) {
       continue;
@@ -319,29 +320,34 @@ void render_scene(const Scene& scene) {
 
   for (unsigned i = 0; i < w; ++i) {
     for (unsigned j = 0; j < h; ++j) {
-      // TODO: Implement depth of field
-      Vector3d shift = grid_origin + (i + 0.5) * x_displacement + (j + 0.5) * y_displacement;
-      // Vector3d noise(scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.position[2]);
+      for (int k = 0; k < 10; ++k) {
+        // TODO: Implement depth of field - Done
+        Vector3d shift = grid_origin + (i + 0.5) * x_displacement + (j + 0.5) * y_displacement;
+        Vector3d noise(scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.position[2]);
 
-      // Prepare the ray
-      Ray ray;
+        // Prepare the ray
+        Ray ray;
 
-      if (scene.camera.is_perspective) {
-        // Perspective camera
-        ray.origin = scene.camera.position;
-        ray.direction = shift;
-      } else {
-        // Orthographic camera
-        ray.origin = scene.camera.position + Vector3d(shift[0], shift[1], 0);
-        ray.direction = Vector3d(0, 0, -1);
+        if (scene.camera.is_perspective) {
+          // Perspective camera
+          ray.origin = noise;
+          ray.direction = shift + scene.camera.position - noise;
+        } else {
+          // Orthographic camera
+          ray.origin = scene.camera.position + Vector3d(shift[0], shift[1], 0);
+          ray.direction = Vector3d(0, 0, -1);
+        }
+
+        int max_bounce = 5;
+        Vector3d C = shoot_ray(scene, ray, max_bounce);
+        R(i, j) += C(0);
+        G(i, j) += C(1);
+        B(i, j) += C(2);
       }
-
-      int max_bounce = 5;
-      Vector3d C = shoot_ray(scene, ray, max_bounce);
-      R(i, j) = C(0);
-      G(i, j) = C(1);
-      B(i, j) = C(2);
-      A(i, j) = 1;
+      R(i,j) /= 10;
+      G(i,j) /= 10;
+      B(i,j) /= 10;
+      A(i,j) = 1;
     }
   }
 
