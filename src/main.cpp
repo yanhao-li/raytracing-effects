@@ -321,14 +321,14 @@ void render_scene(const Scene& scene) {
     for (unsigned j = 0; j < h; ++j) {
       // TODO: Implement depth of field
       Vector3d shift = grid_origin + (i + 0.5) * x_displacement + (j + 0.5) * y_displacement;
-      Vector3d noise(scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.position[2]);
+      // Vector3d noise(scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.lens_radius * (1.0f * rand() / RAND_MAX), scene.camera.position[2]);
 
       // Prepare the ray
       Ray ray;
 
       if (scene.camera.is_perspective) {
         // Perspective camera
-        ray.origin = noise;
+        ray.origin = scene.camera.position;
         ray.direction = shift;
       } else {
         // Orthographic camera
