@@ -217,7 +217,7 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
   Intersection reflection_hit;
   Object* reflection_obj = find_nearest_object(scene, reflection_ray, reflection_hit);
   if (reflection_obj && max_bounce > 0) {
-    reflection_color = reflection_color + mat.specular_color.cwiseProduct(ray_color(scene, reflection_ray, *reflection_obj, reflection_hit, max_bounce - 1));
+    reflection_color = mat.specular_color.cwiseProduct(ray_color(scene, reflection_ray, *reflection_obj, reflection_hit, max_bounce - 1));
   }
 
   // TODO: Compute the color of the refracted ray and add its contribution to
@@ -225,6 +225,22 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
   //       Make sure to check for total internal reflection before shooting a
   //       new ray.
   Vector3d refraction_color = mat.refraction_color;
+
+  // check total internal reflection
+  
+  // ray is leaving the sphere
+  bool inside = hit.normal.dot(ray.direction) > 0;
+  
+  Vector3d refraction_normal = inside ? -hit.normal : hit.normal;
+  double tir = 1 - pow(mat.refraction_index, 2) * (1 - pow((ray.direction.dot(refraction_normal)), 2));
+
+  // avoid total internal reflection
+  if (tir >= 0) {
+    Ray refraction_ray;
+    refraction_ray.direction = mat.refraction_index * (ray.direction - refraction_normal * (ray.direction.dot(refraction_normal))) - refraction_normal * sqrt(tir);
+    refraction_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * refraction_ray.direction;
+    refraction_color = mat.refraction_color.cwiseProduct(shoot_ray(scene, refraction_ray, max_bounce - 1));
+  }
 
   // Rendering equation
   Vector3d C =
@@ -461,6 +477,6 @@ int main(int argc, char* argv[]) {
   }
   Scene scene = load_scene(argv[1]);
   render_scene(scene);
-  render_scene_animation(scene);
+  // render_scene_animation(scene);
   return 0;
 }
