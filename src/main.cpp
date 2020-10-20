@@ -127,21 +127,20 @@ bool Sphere::intersect(const Ray& ray, Intersection& hit) {
   double df = pow(2 * rd.dot(vec), 2) -
               4 * dd * ((vec).dot(vec) - pow(this->radius, 2));
   if (df >= 0) {
-    double t;
 		double t1 = (-2 * rd.dot(vec) + sqrt(df)) / (2 * dd);
 		double t2 = (-2 * rd.dot(vec) - sqrt(df)) / (2 * dd);
 
-    if (t1 < t2 && t1 > 0) {
-      t = t1;
-    } else if (t2 < t1 && t2 > 0) {
-      t = t2;
-    } else {
-      return false;
+    hit.ray_param = std::min(t1, t2);
+    if (hit.ray_param < 0) {
+        hit.ray_param = std::max(t1, t2);
+    }
+    if (hit.ray_param < 0) {
+        return false;
     }
 
-		hit.position = ray.origin + t * rd;
+		hit.position = ray.origin + hit.ray_param * rd;
 		hit.normal = (hit.position - this->position).normalized();
-		hit.ray_param = t;
+
     return true;
   }
   return false;
@@ -187,7 +186,7 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
     Ray shadow_ray;
     shadow_ray.direction = Li;
     // shadow_ray.origin = hit.position;
-    shadow_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * shadow_ray.direction;
+    shadow_ray.origin = hit.position + 0.01 * shadow_ray.direction;
     
     if (!is_light_visible(scene, shadow_ray, light)) {
       continue;
@@ -213,7 +212,7 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
   //prepare reflection ray
   Ray reflection_ray;
   reflection_ray.direction = ray.direction - 2 * (ray.direction.dot(hit.normal)) * hit.normal;
-  reflection_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * reflection_ray.direction;
+  reflection_ray.origin = hit.position + 0.01 * reflection_ray.direction;
   Intersection reflection_hit;
   Object* reflection_obj = find_nearest_object(scene, reflection_ray, reflection_hit);
   if (reflection_obj && max_bounce > 0) {
@@ -238,8 +237,8 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
   if (tir >= 0) {
     Ray refraction_ray;
     refraction_ray.direction = mat.refraction_index * (ray.direction - refraction_normal * (ray.direction.dot(refraction_normal))) - refraction_normal * sqrt(tir);
-    refraction_ray.origin = hit.position + std::numeric_limits<double>::epsilon() * refraction_ray.direction;
-    refraction_color = mat.refraction_color.cwiseProduct(shoot_ray(scene, refraction_ray, max_bounce - 1));
+    refraction_ray.origin = hit.position + 0.01 * refraction_ray.direction;
+    // refraction_color = mat.refraction_color.cwiseProduct(shoot_ray(scene, refraction_ray, max_bounce - 1));
   }
 
   // Rendering equation
