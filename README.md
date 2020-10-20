@@ -8,4 +8,14 @@ Thread model: posix
 InstalledDir: /Library/Developer/CommandLineTools/usr/bin
 
 # Outputs
-## Field of View and Perspective Camera
+## Original Result
+![](img/result_original.png?raw=true)
+
+## Applying depth of field
+![](img/result_depth_of_field.png?raw=true)
+
+## Shadow ray is not offset by a small epsilon value
+![](img/result_shadow.png?raw=true)
+
+## Animation
+![](img/animation.gif?raw=true)

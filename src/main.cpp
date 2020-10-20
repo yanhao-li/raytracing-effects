@@ -231,14 +231,20 @@ Vector3d ray_color(const Scene& scene, const Ray& ray, const Object& obj,
   bool inside = hit.normal.dot(ray.direction) > 0;
   
   Vector3d refraction_normal = inside ? -hit.normal : hit.normal;
-  double tir = 1 - pow(mat.refraction_index, 2) * (1 - pow((ray.direction.dot(refraction_normal)), 2));
+  double tir = 1.0 - pow(mat.refraction_index, 2) * (1.0 - pow((ray.direction.dot(refraction_normal)), 2));
 
   // avoid total internal reflection
-  if (tir >= 0) {
+  if (tir > 0) {
     Ray refraction_ray;
     refraction_ray.direction = mat.refraction_index * (ray.direction - refraction_normal * (ray.direction.dot(refraction_normal))) - refraction_normal * sqrt(tir);
     refraction_ray.origin = hit.position + 0.01 * refraction_ray.direction;
-    // refraction_color = mat.refraction_color.cwiseProduct(shoot_ray(scene, refraction_ray, max_bounce - 1));
+    Intersection refraction_hit;
+    Object* refraction_obj = find_nearest_object(scene, refraction_ray, refraction_hit);
+    if (refraction_obj && max_bounce > 0) {
+      refraction_color = mat.refraction_color.cwiseProduct(ray_color(scene, refraction_ray, *refraction_obj, refraction_hit, max_bounce - 1));
+    }
+  } else {
+    refraction_color = Vector3d(0,0,0);
   }
 
   // Rendering equation
@@ -476,6 +482,6 @@ int main(int argc, char* argv[]) {
   }
   Scene scene = load_scene(argv[1]);
   render_scene(scene);
-  // render_scene_animation(scene);
+  render_scene_animation(scene);
   return 0;
 }
